@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Escape Lithuania – The Baltic Quest</title>
+<style>
+:root{
+  --lt-green:#006a44; --lt-yellow:#fdb913; --lt-red:#c1272d;
+  --bg:#0f0f12; --card:#17181c; --text:#f1f5f9; --muted:#a8b0bb;
+}
+*{box-sizing:border-box;}
+body{margin:0; font-family:system-ui, sans-serif; background:linear-gradient(135deg,#0b1220,#0d0e12 60%,#14161a); color:var(--text);}
+header{padding:16px; display:flex; align-items:center; gap:12px; background:rgba(13,14,18,.9); position:sticky; top:0; z-index:5;}
+h1{margin:0;font-size:clamp(20px,2.6vw,28px);}
+main{max-width:900px;margin:0 auto;padding:24px 16px 60px;}
+.card{background:var(--card);border:1px solid #23262e;border-radius:16px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.35);}
+button{appearance:none;border:0;background:linear-gradient(135deg,var(--lt-green),#0ea061);color:#fff;padding:12px 18px;border-radius:12px;font-weight:700;cursor:pointer;box-shadow:0 8px 16px rgba(0,0,0,.25);}
+button[disabled]{opacity:.6;cursor:not-allowed;}
+.neutral{background:#1f2229;}
+.secondary{background:#272b33;}
+.danger{background:linear-gradient(135deg,var(--lt-red),#ff4d4f);}
+.grid{display:grid;gap:18px;}
+.qimg{width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:12px;border:1px solid #2a2f39;background:#0f1115;}
+.question h3{margin:10px 0 8px;font-size:clamp(18px,2.4vw,24px);}
+.options{display:grid;gap:10px;margin:10px 0 4px;}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;border:1px solid #1a1c21;background:#1a1c21;cursor:pointer;transition:.15s transform,.15s background;}
+.opt:hover{transform:translateY(-1px);background:#1d2026;}
+.opt input{accent-color:var(--lt-yellow);width:18px;height:18px;}
+.meta{display:flex;gap:14px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:14px;}
+.badge{padding:6px 10px;border-radius:999px;border:1px solid #2a2f39;background:#15161a;}
+.controls{display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:10px;}
+.hints{display:grid;gap:6px;margin-top:10px;}
+.hint{font-size:14px;color:#cbd5e1;opacity:.9;}
+.hint.hidden{display:none;}
+.lock{color:#ffadad;font-weight:700;}
+.progress{height:10px;background:#1b1e24;border-radius:999px;border:1px solid #2a2f39;overflow:hidden;}
+.bar{height:100%;width:0%;background:linear-gradient(90deg,var(--lt-green),var(--lt-yellow),var(--lt-red));transition:width .4s;}
+footer{margin-top:18px;color:var(--muted);font-size:12px;text-align:center;}
+.celebrate{position:fixed;inset:0;pointer-events:none;z-index:10;}
+.confetti{position:absolute;width:8px;height:14px;opacity:.9;border-radius:2px;animation:fall linear forwards;}
+@keyframes fall{0%{transform:translateY(-10vh) rotate(0deg);}100%{transform:translateY(110vh) rotate(720deg);}}
+table{width:100%; border-collapse:collapse;}
+th, td{padding:8px;border-bottom:1px solid #23262e;}
+th{text-align:left;}
+</style>
+</head>
+<body>
+<header><h1>Escape Lithuania – The Baltic Quest</h1></header>
+<main>
+
+<section id="screen-start" class="card">
+<h2>Enter Team Name</h2>
+<input id="team-name" placeholder="Team Name" style="padding:12px 10px;border-radius:12px;width:70%;margin-top:12px;font-size:16px">
+<div style="margin-top:14px"><button id="btn-start">Start Game</button></div>
+</section>
+
+<section id="screen-quiz" class="grid" style="display:none">
+<div class="card">
+<div class="progress"><div id="progress-bar" class="bar"></div></div>
+<div class="meta" style="margin-top:10px">
+<span class="badge">Question <span id="qnum">1</span></span>
+<span class="badge timer">Time: <span id="section-timer">00:00</span></span>
+<span id="hint-status" class="badge">Hint ready in 00:30</span>
+</div>
+</div>
+
+<div class="card question">
+<img id="qimg" class="qimg" alt="Question image">
+<h3 id="qtitle">Question title</h3>
+<div id="qtext" style="color:var(--muted); margin:6px 0 10px"></div>
+<div id="options" class="options"></div>
+<div class="controls">
+<div class="meta"><span class="badge">Status: <b id="status">—</b></span><span id="lockmsg" class="lock" style="display:none"></span></div>
+<div><button id="btn-hint" class="secondary" disabled>Reveal hint</button><button id="btn-next" disabled>Next →</button></div>
+</div>
+<div id="hints" class="hints"></div>
+</div>
+</section>
+
+<section id="screen-end" class="card" style="display:none">
+<h2>You Escaped Lithuania! 🎉</h2>
+<p>Congratulations, enjoy your <b>Pergalė</b> chocolate.</p>
+<div style="display:flex; gap:10px; justify-content:center">
+<button id="btn-restart" class="neutral">Play again</button>
+<button id="btn-celebrate" class="danger">Celebrate!</button>
+</div>
+<footer>Made for Erasmus – real places, real culture.</footer>
+</section>
+
+<section id="screen-results" class="card" style="display:none">
+<h2>Results 🏆</h2>
+<table id="results-table"><thead><tr><th>#</th><th>Team</th><th>Time</th></tr></thead><tbody></tbody></table>
+</section>
+
+</main>
+<canvas id="fx" class="celebrate"></canvas>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.5.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAal4OrNEl-hK_kdiEk7IzFRMEbd95gyVE",
+  authDomain: "erasmus-escape-lithuania.firebaseapp.com",
+  projectId: "erasmus-escape-lithuania",
+  storageBucket: "erasmus-escape-lithuania.firebasestorage.app",
+  messagingSenderId: "199219001163",
+  appId: "1:199219001163:web:8ff04629f1cf69c15c9ace"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// QUESTIONS
+const QUESTIONS = [
+  {title:"Dream of Iron Wolf", text:"A castle on a hill, city born from a dream", image:"images/gediminas.jpg", options:["Kaunas","Vilnius","Klaipėda","Riga"], correct:1, hints:["Capital of Lithuania","Gediminas dreamt of a wolf","Vilnius"]},
+  {title:"Tongue Twister", text:"Šeši žąsinai žarstė žirnius žvirbliams. What is 'Šeši'?", image:"images/six.png", options:["Six","Goose","Beans","Fast"], correct:0, hints:["Before seven","It’s a number","Six"]},
+  {title:"Sweet Victory", text:"Which Lithuanian chocolate means 'Victory'?", image:"images/pergale.jpg", options:["Griliažas","Karvutė","Pergalė","Laima"], correct:2, hints:["Think winners","Starts with P","Pergalė"]},
+  {title:"Hill of Crosses", text:"Sacred hill in Lithuania with thousands of crosses", image:"images/crosses.jpg", options:["Hill of Crosses","Freedom Hill","Miracle Hill","Mount Hope"], correct:0, hints:["Sacred hill","Thousands of crosses","Hill of Crosses"]},
+  {title:"Pink Soup", text:"Cold pink beet soup called?", image:"images/saltibarsciai.jpg", options:["Cepelinai","Šaltibarščiai","Pink Curry","Strawberry Soup"], correct:1, hints:["It’s a soup","It’s cold","Šaltibarščiai"]},
+  {title:"Baltic Way", text:"1989 peaceful protest human chain across 3 Baltic countries", image:"images/balticway.jpg", options:["Freedom Line","Baltic Way","Human Bridge","Baltic Chain"], correct:1, hints:["United 3 nations","600km human chain","Baltic Way"]},
+];
+
+// STATE
+let idx=0, lockedUntil=0, sectionStart=0, revealedHints=0, totalStart=0, rafId=null, nextHintAt=0, teamName="";
+
+// HELPERS
+const $ = sel=>document.querySelector(sel);
+const el = (tag,cls)=>{const e=document.createElement(tag); if(cls)e.className=cls; return e;}
+function fmt(ms){const s=Math.max(0,Math.floor(ms/1000)); const m=Math.floor(s/60); const ss=s%60; return `${m}:${ss.toString().padStart(2,"0")}`; }
+function setProgress(){$("#progress-bar").style.width=((idx)/QUESTIONS.length*100)+"%"; $("#qnum").textContent=idx+1;}
+
+// HINTS
+function resetHints(){ revealedHints=0; const box=$("#hints"); box.innerHTML=""; const q=QUESTIONS[idx]; q.hints.forEach((h,i)=>{ const d=el("div","hint hidden"); d.textContent=`Hint ${i+1}: ${h}`; box.appendChild(d); }); nextHintAt=Date.now()+30000; updateHintButton();}
+function updateHintButton(){ const b=$("#btn-hint"); const hs=$("#hint-status"); function tick(){ const now=Date.now(); if(revealedHints>=3){ b.disabled=true; b.textContent="No more hints"; hs.textContent="Hints: none left"; return;} const left=nextHintAt-now; if(left<=0){ b.disabled=false; b.textContent="Reveal hint"; hs.textContent="Hint ready";}else{b.disabled=true; b.textContent="Reveal hint"; hs.textContent="Hint in "+fmt(left); requestAnimationFrame(tick);}} tick();}
+function revealNextHint(){if(Date.now()<nextHintAt)return; const next=document.querySelector(".hint.hidden"); if(!next){updateHintButton();return;} next.classList.remove("hidden"); revealedHints++; nextHintAt=Date.now()+30000; updateHintButton();}
+
+// RENDER
+function render(){setProgress(); const q=QUESTIONS[idx]; $("#qimg").src=q.image; $("#qimg").alt=q.title; $("#qtitle").textContent=q.title; $("#qtext").textContent=q.text; $("#options").innerHTML=""; $("#status").textContent="Pick an answer"; $("#btn-next").disabled=true; $("#lockmsg").style.display="none"; resetHints(); sectionStart=performance.now(); $("#section-timer").textContent="00:00"; q.options.forEach((t,i)=>{ const label=el("label","opt"); const input=el("input"); input.type="radio"; input.name="opt"; input.value=i; const span=el("span"); span.textContent=t; label.appendChild(input); label.appendChild(span); label.addEventListener("click",(ev)=>{ const now=Date.now(); if(now<lockedUntil)return; const correct=(i===q.correct); $("#status").textContent=correct?"Correct!":"Wrong — locked 30s"; if(correct)$("#btn-next").disabled=false; else{lockedUntil=now+30000; $("#lockmsg").style.display="inline"; startLockCountdown();} }); $("#options").appendChild(label); }); }
+function startLockCountdown(){ const msg=$("#lockmsg"); function tick(){ const left=Math.max(0,lockedUntil-Date.now()); if(left<=0){msg.style.display="none"; $("#status").textContent="Pick an answer"; return;} msg.textContent=`Locked for ${Math.ceil(left/1000)}s after wrong answer`; requestAnimationFrame(tick);} tick(); }
+
+// SAVE & RESULTS
+async function saveResult(name,time){ try{ await addDoc(collection(db,"teams"), {name,time}); }catch(e){console.error(e);} }
+async function showResults(){ const tbody=document.querySelector("#results-table tbody"); tbody.innerHTML=""; const q=query(collection(db,"teams"), orderBy("time")); const snapshot=await getDocs(q); let rank=1; snapshot.forEach(doc=>{ const d=doc.data(); const tr=el("tr"); const tsec=Math.floor(d.time/1000); const min=Math.floor(tsec/60); const sec=tsec%60; tr.innerHTML=`<td>${rank++}</td><td>${d.name}</td><td>${min}:${sec.toString().padStart(2,"0")}</td>`; tbody.appendChild(tr); }); $("#screen-results").style.display="block"; }
+
+// NAV
+function startGame(){teamName=$("#team-name").value.trim()||"Team"; $("#screen-start").style.display="none"; $("#screen-quiz").style.display="grid"; idx=0; lockedUntil=0; totalStart=performance.now(); render(); if(rafId)cancelAnimationFrame(rafId); (function tick(){ $("#section-timer").textContent=fmt(performance.now()-sectionStart); rafId=requestAnimationFrame(tick); })(); }
+function next(){ idx++; if(idx>=QUESTIONS.length){finish();}else{lockedUntil=0; render();} }
+function finish(){ $("#screen-quiz").style.display="none"; $("#screen-end").style.display="block"; confetti(); saveResult(teamName,performance.now()-totalStart); showResults(); }
+
+// CONFETTI
+function confetti(){ const colors=["#006a44","#fdb913","#c1272d","#ffffff","#60a5fa"]; const N=120; for(let i=0;i<N;i++){ const d=el("div","confetti"); d.style.left=Math.random()*100+"%"; d.style.background=colors[Math.floor(Math.random()*colors.length)]; d.style.animationDuration=(1.5+Math.random()*2.2)+"s"; d.style.animationDelay=(Math.random()*0.5)+"s"; d.style.opacity=0.7+Math.random()*0.3; document.body.appendChild(d); setTimeout(()=>d.remove(),3500); }}
+
+// EVENTS
+$("#btn-start").addEventListener("click",startGame);
+$("#btn-next").addEventListener("click",next);
+$("#btn-hint").addEventListener("click",revealNextHint);
+$("#btn-restart").addEventListener("click",()=>{ $("#screen-end").style.display="none"; $("#screen-start").style.display="block"; $("#screen-results").style.display="none";});
+$("#btn-celebrate").addEventListener("click",confetti);
+</script>
+</body>
+</html>
